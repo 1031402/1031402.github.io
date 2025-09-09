@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Mul.Live 실행 도우미</title>
+  <!-- 검색엔진 차단 -->
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    body { background:#111; color:#fff; font-family:sans-serif; padding:20px; }
+    h2 { margin-bottom:20px; }
+    .section { margin-bottom:20px; }
+    input {
+      width:500px;
+      padding:6px;
+      margin:5px 0;
+      display:block;
+    }
+    button {
+      padding:6px 12px;
+      margin-top:10px;
+      cursor:pointer;
+      font-size:14px;
+    }
+    .list { margin-top:10px; }
+  </style>
+</head>
+<body>
+  <h2>🚀 Mul.Live 자동 실행 도우미</h2>
+
+  <!-- SOOP -->
+  <div class="section">
+    <h3>SOOP 방송 (BJ 이름 또는 주소) <span style="color:#f66;">※ 최소 1명</span></h3>
+    <div id="soopList" class="list"></div>
+    <button onclick="addSoop()">+ SOOP 추가</button>
+  </div>
+
+  <!-- YouTube -->
+  <div class="section">
+    <h3>YouTube 방송 (선택 사항)</h3>
+    <button onclick="openYouTubeSearch()">🔍 유튜브 검색하기</button>
+    <input type="text" id="ytInput" placeholder="찾은 유튜브 주소 붙여넣기 (비워도 됨)">
+  </div>
+
+  <button onclick="openMul()" style="margin-top:30px;font-size:16px;">🚀 Mul.Live 열기</button>
+
+  <script>
+    let soopMap = {};
+
+    // map.json 불러오기
+    fetch("map.json")
+      .then(res => res.json())
+      .then(data => {
+        soopMap = data;
+        console.log("맵핑 로드 완료:", soopMap);
+      })
+      .catch(err => {
+        console.error("map.json 불러오기 실패:", err);
+      });
+
+    // SOOP 입력칸 추가
+    function addSoop(value="") {
+      const div = document.createElement("div");
+      div.innerHTML = `<input type="text" placeholder="BJ 이름 또는 방송 주소" value="${value}">`;
+      document.getElementById("soopList").appendChild(div);
+    }
+
+    // 유튜브 검색 새창 열기
+    function openYouTubeSearch() {
+      const query = prompt("검색할 키워드를 입력하세요:", "");
+      if (query) {
+        window.open("https://www.youtube.com/results?search_query=" + encodeURIComponent(query), "_blank");
+      }
+    }
+
+    // 유튜브 ID 추출
+    function getYoutubeId(input) {
+      input = input.trim();
+      try {
+        if (input.includes("youtube.com/watch")) {
+          return new URL(input).searchParams.get("v");
+        }
+        if (input.includes("youtu.be/")) {
+          return input.split("youtu.be/")[1].split(/[?&]/)[0];
+        }
+        return input;
+      } catch {
+        return input;
+      }
+    }
+
+    // SOOP ID 추출 (주소 -> 아이디 변환)
+    function getSoopId(input) {
+      input = input.trim();
+      if (soopMap[input]) return soopMap[input]; // 매핑 우선
+      if (input.includes("sooplive.co.kr/")) {
+        try {
+          return new URL(input).pathname.split("/")[1];
+        } catch {
+          return "";
+        }
+      }
+      return input; // 직접 아이디 입력
+    }
+
+    // Mul.Live 열기
+    function openMul() {
+      const soopInputs = document.querySelectorAll("#soopList input");
+      const ytInput = document.getElementById("ytInput").value.trim();
+
+      let parts = [];
+
+      // SOOP 변환
+      soopInputs.forEach(inp => {
+        const name = inp.value.trim();
+        if (name) {
+          const id = getSoopId(name);
+          if (id) {
+            parts.push(id);
+          } else {
+            alert(`SOOP 아이디를 인식할 수 없음: ${name}`);
+          }
+        }
+      });
+
+      if (parts.length === 0) {
+        alert("SOOP BJ는 최소 1개 이상 입력해야 합니다!");
+        return;
+      }
+
+      // 유튜브 추가 (선택)
+      if (ytInput) {
+        const ytId = getYoutubeId(ytInput);
+        parts.push("y:" + ytId);
+      }
+
+      const mulUrl = "https://mul.live/" + parts.join("/");
+      window.open(mulUrl, "_blank");
+    }
+
+    // 기본 SOOP 입력칸 하나 생성
+    addSoop();
+  </script>
+</body>
+</html>
